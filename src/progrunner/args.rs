@@ -1,8 +1,8 @@
-use std::str::{Chars, SplitWhitespace};
+use std::str::{SplitWhitespace};
 
 
 #[derive(Debug)]
-pub enum Program {
+pub enum Command {
     Exit,
     Unknown,
     Ls,
@@ -18,7 +18,7 @@ pub enum Op {
 #[derive(Debug)]
 pub enum Token {
     Operator(Op),
-    Command(Program),
+    Command(Command),
     Flag(String),
     Argument(String)
 }
@@ -30,11 +30,11 @@ impl Clone for Token {
                 Op::Pipe => Token::Operator(Op::Pipe)
             }
             Token::Command(prog) => match prog {
-                Program::Ls => Token::Command(Program::Ls),
-                Program::Cd => Token::Command(Program::Cd),
-                Program::Echo => Token::Command(Program::Echo),
-                Program::Exit => Token::Command(Program::Exit),
-                Program::Unknown => Token::Command(Program::Unknown)
+                Command::Ls => Token::Command(Command::Ls),
+                Command::Cd => Token::Command(Command::Cd),
+                Command::Echo => Token::Command(Command::Echo),
+                Command::Exit => Token::Command(Command::Exit),
+                Command::Unknown => Token::Command(Command::Unknown)
             }
             Token::Flag(f) => Token::Flag(f.clone()),
             Token::Argument(arg) => Token::Argument(arg.clone())
@@ -47,17 +47,17 @@ impl Token {
         println!("Current {:?}", curr);
         println!("Match String {:?}", s);
         match s.trim() {
-            "exit" => Some(Token::Command(Program::Exit)),
-            "ls" => Some(Token::Command(Program::Ls)),
-            "cd" => Some(Token::Command(Program::Cd)),
-            "echo" => Some(Token::Command(Program::Echo)),
+            "exit" => Some(Token::Command(Command::Exit)),
+            "ls" => Some(Token::Command(Command::Ls)),
+            "cd" => Some(Token::Command(Command::Cd)),
+            "echo" => Some(Token::Command(Command::Echo)),
             "|" => Some(Token::Operator(Op::Pipe)),
             other if other.starts_with("-") => {
                match curr {
                    Some(Token::Command(_)) => Some(Token::Flag(other.to_string())),
                     Some(Token::Argument(_)) => Some(Token::Flag(other.to_string())),
                     Some(Token::Flag(_)) => Some(Token::Flag(other.to_string())),
-                    // should probably exit the program and log something
+                    // should probably exit the Command and log something
                     Some(Token::Operator(_)) => None,
                     None => None
                }
@@ -68,46 +68,37 @@ impl Token {
     }
 }
 
+// "Expression" types
+//  Have a "Program" as a type of expression, which consists of a command and it's associated
+//  arguments. Equivalent to functions.
+//
+//
 
-impl Program {
-    pub fn from_string(command: String) -> Program {
-        match command.trim() {
-            "exit" => Program::Exit,
-            "ls" => Program::Ls,
-            "cd" => Program::Cd,
-            "echo" => Program::Echo,
-            _ => Program::Unknown,
-        }
-    }
-
-    pub fn try_from_string(command: String) -> Option<Program> {
-        match Program::from_string(command) {
-            Program::Unknown => None,
-            other => Some(other)
-        }
-    }
+pub enum Expr {
+    Program,
+    Binary
 }
 
 #[derive(Debug)]
-pub struct Args {
-    pub program: Program,
+pub struct Program {
+    pub command: Command,
     pub arguments: Vec<String>,
 }
 
-impl Args {
-    pub fn build(buffer: &String) -> Result<Args, &'static str> {
+impl Program {
+    pub fn build(buffer: &String) -> Result<Self, &'static str> {
         let mut split_args = buffer.split(" ");
 
-        let program = match split_args.next() {
-            Some(command) => Some(Program::from_string(command.to_string())),
+        let command = match split_args.next() {
+            Some(cmd) => Some(Command::from_string(cmd.to_string())),
             None => None,
         };
 
         let args: Vec<String> = split_args.map(|x| x.to_string()).collect();
 
-        if let Some(prog) = program {
-            Ok(Args {
-                program: prog,
+        if let Some(cmd) = command {
+            Ok(Program {
+                command: cmd,
                 arguments: args,
             })
         } else {
@@ -115,6 +106,14 @@ impl Args {
         }
     }
 }
+
+pub struct Binary {
+    left: Box<Expr>,
+    right: Box<Expr>,
+    operator: Token
+}
+
+
 
 pub struct Scanner<'a> {
     input: SplitWhitespace<'a>,
@@ -126,16 +125,6 @@ impl<'a> Scanner<'a> {
     fn new(text: &'a String) -> Self {
         Scanner { input: text.split_whitespace(), curr: None }
     }
-
-    /*
-    fn gather_string(curr: &char, iter: &mut Chars<'a>) -> String {
-        let s: String = iter.take_while(|x| !x.is_whitespace()).collect();
-        let mut match_str = String::new();
-        match_str.push_str(&curr.to_string()); // this is okay because returning a new value
-        match_str.push_str(&s);
-        match_str
-    }
-    */
 }
 
 
@@ -162,3 +151,20 @@ pub fn tokenize<'a>(buffer: &'a String) -> () {
 
     println!("{:?}", tokens);
 }
+
+
+// Scan through list of tokens
+// If encounter a Command, gather arguments, then construct a "Program"
+// If encounter an operator (currently only "|"), 
+
+// Different types of expressions should have different AST builds
+//  -- Only rules we need to implement are for operators:
+//  -- Currently only pipe op
+//
+// command    -> COMMAND_LOOKUP FLAGS ARGUMENTS 
+//
+// expression -> command expression command
+// pipe       -> expression "|" expression
+
+
+

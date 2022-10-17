@@ -2,7 +2,7 @@ use nix::unistd;
 use std::io;
 use std::process::Command;
 
-use crate::progrunner::args::Args;
+use crate::progrunner::args::Program;
 
 pub fn get_arg(args: &Vec<String>, index: usize) -> Option<&str> {
     if args.len() > index {
@@ -17,8 +17,8 @@ pub fn get_arg(args: &Vec<String>, index: usize) -> Option<&str> {
     }
 }
 
-pub fn cd(args: Args) -> Result<(), &'static str> {
-    let maybe_arg = get_arg(&args.arguments, 0);
+pub fn cd(program: Program) -> Result<(), &'static str> {
+    let maybe_arg = get_arg(&program.arguments, 0);
 
     if let Some(arg) = maybe_arg {
         unistd::chdir(arg).map_err(|_| "cd command failed")
@@ -27,8 +27,8 @@ pub fn cd(args: Args) -> Result<(), &'static str> {
     }
 }
 
-pub fn ls(args: Args) -> Result<(), &'static str> {
-    let maybe_arg = get_arg(&args.arguments, 0);
+pub fn ls(program: Program) -> Result<(), &'static str> {
+    let maybe_arg = get_arg(&program.arguments, 0);
 
     let exit_status = if let Some(arg) = maybe_arg {
         Command::new("ls").arg(arg).status()
@@ -46,10 +46,10 @@ pub fn map_result<'a, E>(result: Result<(), E>, error_message: &'a str) -> Resul
     result.map_err(|_| error_message)
 } 
 
-pub fn echo(args: Args) -> Result<(), &'static str> {
+pub fn echo(program: Program) -> Result<(), &'static str> {
     use io::Write;
 
-    let maybe_arg = get_arg(&args.arguments, 0);
+    let maybe_arg = get_arg(&program.arguments, 0);
 
     match maybe_arg {
         None => map_result(io::stdout().write_all(b""), "some error message"),
