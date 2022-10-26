@@ -13,7 +13,6 @@ fn main() -> Result<(), Box<dyn error::Error>> {
         let stdin = io::stdin();
 
         stdin.read_line(&mut buffer)?;
-
         run_program(&buffer)?;
 
         buffer.clear();
