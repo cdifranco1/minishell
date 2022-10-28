@@ -10,8 +10,6 @@ pub fn run_program(input: &String) -> Result<(), &'static str> {
     let ast = parse(input.to_string())?;
     let res = ast.eval(Some(Stdio::inherit()), Some(Stdio::inherit()));
 
-    println!("{:?}", ast);
-
     let wait = res.map(|c| match c {
         Some(mut child) => Some(child.wait()),
         None => None,
